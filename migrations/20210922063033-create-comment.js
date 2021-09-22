@@ -18,7 +18,7 @@ module.exports = {
           key : 'id'
         }
       },
-      comment: {
+      content: {
         type: Sequelize.STRING,
       },
       createdAt: {
