@@ -1,5 +1,5 @@
 # dependencies
 /node_modules
-
-/utility/error.log
+.env
+/src/utility/error.log
 
