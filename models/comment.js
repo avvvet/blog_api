@@ -7,6 +7,12 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       Comment.belongsTo(models.Post, {
         foreignKey : 'post_id'
+      }),
+      Comment.hasMany(models.CommentThread, {
+        foreignKey: 'root_comment_id'
+      }),
+      Comment.hasMany(models.CommentThread, {
+        foreignKey: 'child_comment_id'
       })
     }
   };
