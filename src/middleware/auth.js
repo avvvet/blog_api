@@ -10,9 +10,10 @@ const authUser = (req, res, next) => {
             req.user_id = decoded.data;
             next();
         });
+        
     } catch(e) {
         err_log(req.method, req.url, e.message)
-        res.status(401).send();
+        res.status(402).send({ status : 'not authorized'});
     }
 }
 
