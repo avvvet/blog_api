@@ -16,7 +16,7 @@ npm start
 
 #test
 npm test
-this will start mocha and will run the test scripts
+this will start ESlint and then mocha mocha will run the test scrips /test
 
 #api playload examples - you may use postman 
 this will create new post.

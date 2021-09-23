@@ -6,14 +6,14 @@ const { authUser} = require('../middleware/auth')
 const validator = require('validator');
 const sequelize = models.sequelize;
 
-router.post('/:post_id', authUser, async (req, res) => {
+router.post('/:post_id', authUser, (req, res) => {
     const data = _.pick(req.body, ['content'])
     data.user_id = req.user_id //from auth
     data.post_id = req.params.post_id
     if(validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(500).send({error : 'title required'})
     if(data.post_id===null) return res.status(500).send({error : 'post id required'})
     
-    return await models.Comment.create(
+    models.Comment.create(
         data
     ).then((rslt) => {
         if(rslt) return res.status(201).send()
@@ -93,7 +93,7 @@ router.get('/:post_id/reply/:root_comment_id', authUser, (req, res) => {
     });
 })
 
-router.get('/:post_id', authUser, async (req, res) => {
+router.get('/:post_id', authUser, (req, res) => {
     models.Comment.findAll({
         where : { post_id: req.params.post_id},
         include: [
