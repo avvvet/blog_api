@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'child_comment_id'
       })
     }
-  };
+  }
   Comment.init({
     user_id: DataTypes.STRING,
     post_id: DataTypes.INTEGER,

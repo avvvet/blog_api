@@ -1,6 +1,4 @@
 const jwt = require('jsonwebtoken');
-const dotenv = require('dotenv').config();
-const _ = require('lodash');
 const err_log = require('../utility/error');
 
 const authUser = (req, res, next) => {

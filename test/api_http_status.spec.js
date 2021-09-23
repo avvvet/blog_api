@@ -1,8 +1,9 @@
-
+const mocha = require('mocha')
 const chai = require('chai');
-const assert = require('assert');
 const chaiHttp = require('chai-http');
 const app = require('../src/server');
+const describe = mocha.describe
+const it = mocha.it
 
 chai.use(chaiHttp);
 chai.should();

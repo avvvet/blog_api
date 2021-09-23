@@ -7,9 +7,9 @@ module.exports = (sequelize, DataTypes) => {
     static associate(models) {
       Post.hasMany(models.Comment, {
         foreignKey: 'post_id'
-      });
+      })
     }
-  };
+  }
   Post.init({
     title: DataTypes.STRING,
     user_id: DataTypes.STRING,

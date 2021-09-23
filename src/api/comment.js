@@ -53,13 +53,13 @@ router.post('/:post_id/reply/:root_comment_id', authUser, async (req, res) => {
                    if(inner_rslt) return {status : 201}
                    throw new Error('Thread comment not created')
                 }).catch((e) => {
-                    throw new Error('Error while creating thread comment')
+                    throw new Error('Error while creating thread comment' + e.message)
                 })
             } 
             throw new Error('Root comment not created')
         }).catch((e) => {
-            console.log('transacion errror ', e)
-            throw new Error('Error while creating root comment')
+            err_log(req.method, req.url, e.message)
+            throw new Error('Error while creating root comment ')
         })
     }).then((result) => {
         if(result) return res.status(result.status).send()
@@ -88,7 +88,6 @@ router.get('/:post_id/reply/:root_comment_id', authUser, (req, res) => {
     }).then((rslt) => {
         if(rslt) return res.status(200).send(rslt)
     }).catch((e) => {
-        console.log(e)
         err_log(req.method, req.url, e.message)
         res.status(500).send();
     });

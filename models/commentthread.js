@@ -12,13 +12,13 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey : 'child_comment_id'
       })
     }
-  };
+  }
   CommentThread.init({
     root_comment_id: DataTypes.INTEGER,
     child_comment_id: DataTypes.INTEGER
   }, {
     sequelize,
     modelName: 'CommentThread',
-  });
+  })
   return CommentThread;
 };

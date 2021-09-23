@@ -1,4 +1,5 @@
 const dotenv = require('dotenv').config();
+dotenv;
 module.exports ={
   "development": {
     "username": process.env.DB_USERNAME,
