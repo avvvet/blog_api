@@ -6,22 +6,33 @@ const { authUser} = require('../middleware/auth')
 const validator = require('validator');
 const sequelize = models.sequelize;
 
-router.post('/:post_id', authUser, (req, res) => {
+router.post('/:post_id', authUser, async (req, res) => {
     const data = _.pick(req.body, ['content'])
-    data.user_id = req.user_id //from auth
+    if(_.isEmpty(data)) return res.status(400).send({error : 'required data missing'})
+    if(data.content==null || validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(500).send({error : 'input valid content'})
+    if(!validator.isInt(req.params.post_id)) return res.status(400).send({error : 'param is not valid'})
+    data.user_id = req.user_id 
     data.post_id = req.params.post_id
-    if(validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(500).send({error : 'title required'})
-    if(data.post_id===null) return res.status(500).send({error : 'post id required'})
     
-    models.Comment.create(
-        data
-    ).then((rslt) => {
-        if(rslt) return res.status(201).send()
+    const t = await sequelize.transaction();
+    try {
+       const post = await models.Post.findOne({ where : {id: req.params.post_id}}, {transaction: t})
+       if(post) {
+        const comment = await models.Comment.create(data, {transaction: t})
+        if(comment) {
+            await t.commit()
+            return res.status(201).send()
+        }
         throw new Error('Comment not created')
-    }).catch((e) => {
-        err_log(req.method, req.url, e.message)
-        res.status(500).send({error : e.message})
-    })
+       }
+       await t.rollback()
+       return res.status(400).send({error : 'No post found !'})
+    } catch(e) {
+        console.log(e)
+       await t.rollback()
+       err_log(req.method, req.url, e.message)
+       res.status(500).send({error : e.message})
+    }
 })
 
 /*
@@ -29,16 +40,30 @@ router.post('/:post_id', authUser, (req, res) => {
 */
 router.post('/:post_id/reply/:root_comment_id', authUser, async (req, res) => {
     const data = _.pick(req.body, ['content'])
-    data.user_id = req.user_id // from auth
+    if(_.isEmpty(data)) return res.status(400).send({error : 'required data missing'})
+    if(data.content==null || validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(500).send({error : 'input valid content'})
+    if(!validator.isInt(req.params.post_id)) return res.status(400).send({error : 'post id param is not valid'})
+    if(!validator.isInt(req.params.root_comment_id)) return res.status(400).send({error : 'root comment id param is not valid'})
+
+    data.user_id = req.user_id 
     data.post_id = req.params.post_id
     data.root_comment_id = req.params.root_comment_id
-    if(validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(500).send({error : 'title required'})
-    if(data.post_id===null) return res.status(500).send({error : 'post id required'})
-    if(data.root_comment_id===null) return res.status(500).send({error : 'root thread comment id required'})
     
     const t = await sequelize.transaction();
     
     try {
+
+        const post = await models.Post.findOne({ where : {id: req.params.post_id}}, {transaction: t})
+        if(!post) {
+            await t.rollback();
+            return res.status(400).send({error : 'post id is not found !'})
+        }
+        const root_comment = await models.Comment.findOne({ where : {id: req.params.root_comment_id}}, {transaction: t})
+        if(!root_comment) {
+            await t.rollback();
+            return res.status(400).send({error : 'root comment id is not found !'})
+        }
+
         const comment = await models.Comment.create(
             data, 
             { transaction: t}
@@ -70,6 +95,9 @@ router.post('/:post_id/reply/:root_comment_id', authUser, async (req, res) => {
 
 })
 
+/*
+*  gets all thread comments for a comment reply  
+*/
 router.get('/:post_id/reply/:root_comment_id', authUser, (req, res) => {
     models.Comment.findAll({
         where : { post_id: req.params.post_id},
@@ -93,6 +121,9 @@ router.get('/:post_id/reply/:root_comment_id', authUser, (req, res) => {
     });
 })
 
+/*
+*  gets all root comments for a post 
+*/
 router.get('/:post_id', authUser, (req, res) => {
     models.Comment.findAll({
         where : { post_id: req.params.post_id},
@@ -115,20 +146,20 @@ router.get('/:post_id', authUser, (req, res) => {
     });
 })
 
-router.put('/:comment_id', authUser, (req, res) => {
+router.put('/:comment_id', authUser, async (req, res) => {
     const data = _.pick(req.body, ['content'])
-    if(validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(500).send({error : 'title required'})
-    
-    models.Comment.update(
-         data,
-        { where : { id : req.params.comment_id, user_id: req.user_id}}
-    ).then((rslt) => {
+    if(_.isEmpty(data)) return res.status(400).send({error : 'not updated,at least one valid update params required!'})
+    if(data.content!=undefined && validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(400).send({error : 'input valid content'})
+    if(!validator.isInt(req.params.comment_id)) return res.status(400).send({error : 'comment id param is not valid'})
+   
+    try {
+        const rslt = await models.Comment.update(data, {where : { id : req.params.comment_id, user_id: req.user_id}})
         if(rslt && rslt[0] === 1) return res.status(200).send(rslt);
-        return res.status(400).send();
-    }).catch((e) => {
+        return res.status(400).send({error: 'not updated, invalid param or you are not authorized'});
+    } catch(e) {
         err_log(req.method, req.url, e.message)
         res.status(500).send();
-    });
+    }
 })
 
 router.delete('/:comment_id', authUser, (req, res) => {
@@ -136,7 +167,7 @@ router.delete('/:comment_id', authUser, (req, res) => {
         { where : { id : req.params.comment_id, user_id: req.user_id }}
     ).then((rslt) => {
         if(rslt && rslt === 1) return res.status(200).send();
-        return res.status(400).send();
+        return res.status(400).send({error: 'not deleted, invalid param or you are not authorized'});
     }).catch((e) => {
         err_log(req.method, req.url, e.message)
         res.status(500).send();
