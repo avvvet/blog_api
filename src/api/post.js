@@ -7,10 +7,11 @@ const { authUser} = require('../middleware/auth')
 
 router.post('/', authUser, (req, res) => {
     const data = _.pick(req.body, ['title', 'content'])
+    if(_.isEmpty(data)) return res.status(500).send({error : 'required data missing'})
+    if(data.title==null || validator.isEmpty(data.title, { ignore_whitespace: true })) return res.status(500).send({error : 'title required'})
+    if(data.content==null || validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(500).send({error : 'content required'})
+    
     data.user_id = req.user_id //from auth
-    if(validator.isEmpty(data.title, { ignore_whitespace: true })) return res.status(500).send({error : 'title required'})
-    if(validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(500).send({error : 'content required'})
-   
     models.Post.create(
         data
     ).then((rslt) => {
