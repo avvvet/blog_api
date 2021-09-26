@@ -36,37 +36,37 @@ router.post('/:post_id/reply/:root_comment_id', authUser, async (req, res) => {
     if(data.post_id===null) return res.status(500).send({error : 'post id required'})
     if(data.root_comment_id===null) return res.status(500).send({error : 'root thread comment id required'})
     
-    return sequelize.transaction(async (t) => {
-        return await models.Comment.create(
-            data,
-            { transaction : t}
-        ).then( async (rslt) => {
-            if(rslt) {
-                let inner_data = {
-                    root_comment_id : data.root_comment_id,
-                    child_comment_id: rslt.id
-                }
-                return await models.CommentThread.create(
-                    inner_data,
-                    { transaction : t}
-                ).then((inner_rslt) => {
-                   if(inner_rslt) return {status : 201}
-                   throw new Error('Thread comment not created')
-                }).catch((e) => {
-                    throw new Error('Error while creating thread comment' + e.message)
-                })
-            } 
-            throw new Error('Root comment not created')
-        }).catch((e) => {
-            err_log(req.method, req.url, e.message)
-            throw new Error('Error while creating root comment ')
-        })
-    }).then((result) => {
-        if(result) return res.status(result.status).send()
-    }).catch((e)=>{
+    const t = await sequelize.transaction();
+    
+    try {
+        const comment = await models.Comment.create(
+            data, 
+            { transaction: t}
+        )
+
+        if(comment) {
+            let thread_data = {
+                root_comment_id : data.root_comment_id,
+                child_comment_id: comment.id
+            }
+
+            const comment_thread = await models.CommentThread.create(
+                thread_data,
+                { transaction: t}
+            )
+
+            if(comment_thread) {
+                await t.commit();
+                return res.status(201).send()
+            }
+            throw new Error('Thread comment not created')
+        }
+        throw new Error('Root comment not created')
+    } catch (e) {
+        await t.rollback();
         err_log(req.method, req.url, e.message)
         res.status(500).send({error: e.message})
-    });
+    }
 
 })
 
