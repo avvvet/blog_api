@@ -10,7 +10,7 @@ router.post('/:post_id', authUser, async (req, res) => {
     const data = _.pick(req.body, ['content'])
     if(_.isEmpty(data)) return res.status(400).send({error : 'required data missing'})
     if(data.content==null || validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(500).send({error : 'input valid content'})
-    if(!validator.isInt(req.params.post_id)) return res.status(400).send({error : 'param is not valid'})
+    if(!validator.isInt(req.params.post_id)) return res.status(400).send({error : 'post id param is not valid'})
     data.user_id = req.user_id 
     data.post_id = req.params.post_id
     
@@ -148,7 +148,7 @@ router.get('/:post_id', authUser, (req, res) => {
 
 router.put('/:comment_id', authUser, async (req, res) => {
     const data = _.pick(req.body, ['content'])
-    if(_.isEmpty(data)) return res.status(400).send({error : 'not updated,at least one valid update params required!'})
+    if(_.isEmpty(data)) return res.status(400).send({error : 'not updated,at least a valid update bodyrequired!'})
     if(data.content!=undefined && validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(400).send({error : 'input valid content'})
     if(!validator.isInt(req.params.comment_id)) return res.status(400).send({error : 'comment id param is not valid'})
    
