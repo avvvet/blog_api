@@ -28,6 +28,22 @@ BODY JSON
     "content": "post content"
 }
 
+
+
+const {page , size} = req.query;
+            let start_index = size * (page -1)
+            let end_index = start_index + (page - 1)
+            
+            let photo_chunk = post.photos.slice(start_index, (end_index + 1))
+            console.log('chunk ', photo_chunk)
+            let obj_posts = {
+                title : 'new',
+                desciption : 'new desc',
+                photos : photo_chunk
+            }
+            res.status(200).json(posts)
+
+
 header (you can enter the header key value in postman header section )
 key : x-auth 
 value : eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjoyMjI1LCJpYXQiOjE2MzIzMDc5OTF9.031i2YPQFiWorEVyZEaMnjwjP7WblK797yfheYzL-bM
