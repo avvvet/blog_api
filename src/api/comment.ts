@@ -1,17 +1,25 @@
-const router = require('express').Router()
+import express, {Request,Response} from 'express';
+import '../utility/error'
+const router = express.Router()
 const models = require('../../models')
-const err_log = require('../utility/error.js')
 const _ = require('lodash')
 const { authUser} = require('../middleware/auth')
 const validator = require('validator');
 const sequelize = models.sequelize;
 
-router.post('/:post_id', authUser, async (req, res) => {
+interface CommentInterface {
+    user_id: number,
+    post_id: number,
+    content: string
+    Post: []
+}
+
+router.post('/:post_id', authUser, async (req: Request | any, res: Response) => {
     const data = _.pick(req.body, ['content'])
     if(_.isEmpty(data)) return res.status(400).send({error : 'required data missing'})
     if(data.content==null || validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(500).send({error : 'input valid content'})
     if(!validator.isInt(req.params.post_id)) return res.status(400).send({error : 'post id param is not valid'})
-    data.user_id = req.user_id 
+    data.user_id = req.user_id
     data.post_id = req.params.post_id
     
     const t = await sequelize.transaction();
@@ -27,10 +35,9 @@ router.post('/:post_id', authUser, async (req, res) => {
        }
        await t.rollback()
        return res.status(400).send({error : 'No post found !'})
-    } catch(e) {
-        console.log(e)
+    } catch(e: any) {
        await t.rollback()
-       err_log(req.method, req.url, e.message)
+       ErrorLog(req.method + ':' + req.url, e.message)
        res.status(500).send({error : e.message})
     }
 })
@@ -38,7 +45,7 @@ router.post('/:post_id', authUser, async (req, res) => {
 /*
 * POST Threaded comments - uses transaction for record integrity
 */
-router.post('/:post_id/reply/:root_comment_id', authUser, async (req, res) => {
+router.post('/:post_id/reply/:root_comment_id', authUser, async (req: Request | any, res: Response) => {
     const data = _.pick(req.body, ['content'])
     if(_.isEmpty(data)) return res.status(400).send({error : 'required data missing'})
     if(data.content==null || validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(500).send({error : 'input valid content'})
@@ -87,9 +94,9 @@ router.post('/:post_id/reply/:root_comment_id', authUser, async (req, res) => {
             throw new Error('Thread comment not created')
         }
         throw new Error('Root comment not created')
-    } catch (e) {
+    } catch (e: any) {
         await t.rollback();
-        err_log(req.method, req.url, e.message)
+        ErrorLog(req.method + ':' + req.url, e.message)
         res.status(500).send({error: e.message})
     }
 
@@ -98,7 +105,7 @@ router.post('/:post_id/reply/:root_comment_id', authUser, async (req, res) => {
 /*
 *  gets all thread comments for a comment reply  
 */
-router.get('/:post_id/reply/:root_comment_id', authUser, (req, res) => {
+router.get('/:post_id/reply/:root_comment_id', authUser, (req: Request, res: Response) => {
     models.Comment.findAll({
         where : { post_id: req.params.post_id},
         include: [
@@ -113,10 +120,10 @@ router.get('/:post_id/reply/:root_comment_id', authUser, (req, res) => {
         ],
         raw: true,
         nest: true
-    }).then((rslt) => {
-        if(rslt) return res.status(200).send(rslt)
-    }).catch((e) => {
-        err_log(req.method, req.url, e.message)
+    }).then((comments: [] | CommentInterface) => {
+        if(comments) return res.status(200).send(comments)
+    }).catch((e: any) => {
+        ErrorLog(req.method + ':' + req.url, e.message)
         res.status(500).send();
     });
 })
@@ -124,7 +131,7 @@ router.get('/:post_id/reply/:root_comment_id', authUser, (req, res) => {
 /*
 *  gets all root comments for a post 
 */
-router.get('/:post_id', authUser, (req, res) => {
+router.get('/:post_id', authUser, (req: Request | any, res: Response) => {
     models.Comment.findAll({
         where : { post_id: req.params.post_id},
         include: [
@@ -138,15 +145,15 @@ router.get('/:post_id', authUser, (req, res) => {
           ],
           raw: true,
           nest: true
-    }).then((rslt) => {
-        if(rslt) return res.status(200).send(rslt)
-    }).catch((e) => {
-        err_log(req.method, req.url, e.message)
+    }).then((comments: [] | CommentInterface) => {
+        if(comments) return res.status(200).send(comments)
+    }).catch((e: any) => {
+        ErrorLog(req.method + ':' + req.url, e.message)
         res.status(500).send();
     });
 })
 
-router.put('/:comment_id', authUser, async (req, res) => {
+router.put('/:comment_id', authUser, async (req: Request | any, res: Response) => {
     const data = _.pick(req.body, ['content'])
     if(_.isEmpty(data)) return res.status(400).send({error : 'not updated,at least a valid update bodyrequired!'})
     if(data.content!=undefined && validator.isEmpty(data.content, { ignore_whitespace: true })) return res.status(400).send({error : 'input valid content'})
@@ -156,20 +163,20 @@ router.put('/:comment_id', authUser, async (req, res) => {
         const rslt = await models.Comment.update(data, {where : { id : req.params.comment_id, user_id: req.user_id}})
         if(rslt && rslt[0] === 1) return res.status(200).send(rslt);
         return res.status(400).send({error: 'not updated, invalid param or you are not authorized'});
-    } catch(e) {
-        err_log(req.method, req.url, e.message)
+    } catch(e: any) {
+        ErrorLog(req.method + ':' + req.url, e.message)
         res.status(500).send();
     }
 })
 
-router.delete('/:comment_id', authUser, (req, res) => {
+router.delete('/:comment_id', authUser, (req: Request | any, res: Response) => {
     models.Comment.destroy(
         { where : { id : req.params.comment_id, user_id: req.user_id }}
-    ).then((rslt) => {
-        if(rslt && rslt === 1) return res.status(200).send();
+    ).then((comment : number) => {
+        if(comment && comment === 1) return res.status(200).send();
         return res.status(400).send({error: 'not deleted, invalid param or you are not authorized'});
-    }).catch((e) => {
-        err_log(req.method, req.url, e.message)
+    }).catch((e: {message: string}) => {
+        ErrorLog(req.method + ':' + req.url, e.message)
         res.status(500).send();
     });
 })
